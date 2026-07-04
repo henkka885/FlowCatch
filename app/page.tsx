@@ -26,12 +26,14 @@ export default function Home() {
   const [showCatchPanel, setShowCatchPanel] = useState(false);
   const [catchFileName, setCatchFileName] = useState("");
   const [catchTargetFile, setCatchTargetFile] = useState<"new" | number>("new");
+  const [memory, setMemory] = useState<string>("");
 
   useEffect(() => {
     setFiles(load<FileItem[]>(KEYS.files, []));
     setMessages(load<Message[]>(KEYS.messages, []));
     setCurrentFile(load<number | null>(KEYS.currentFile, null));
     setHydrated(true);
+    setMemory(load<string>(KEYS.memory, ""));
   }, []);
 
   useEffect(() => { if (hydrated) save(KEYS.files, files); }, [files, hydrated]);
@@ -119,14 +121,18 @@ export default function Home() {
     setLoading(true);
 
     const prompt = buildPrompt(input, mode, currentFile, files);
-
+let data: any = null;
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: prompt, mode }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    body: JSON.stringify({
+            message: prompt,
+            mode,
+            history: mode === "chat" ? messages : [],
+            memory: memory,
+          }),
+        });
       const data = await res.json();
 
       const cleaned = (data.text || "")
@@ -144,8 +150,12 @@ export default function Home() {
         ...m,
         { role: "ai", text: `Virhe: ${err instanceof Error ? err.message : "Tuntematon"}` },
       ]);
-    } finally {
-      setLoading(false);
+      } finally {
+          if (data.updatedMemory) {
+            setMemory(data.updatedMemory);
+            save(KEYS.memory, data.updatedMemory);
+          }
+          setLoading(false);
     }
   };
 

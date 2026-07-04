@@ -151,7 +151,7 @@ let data: any = null;
         { role: "ai", text: `Virhe: ${err instanceof Error ? err.message : "Tuntematon"}` },
       ]);
       } finally {
-          if (data.updatedMemory) {
+          if (data?.updatedMemory) {
             setMemory(data.updatedMemory);
             save(KEYS.memory, data.updatedMemory);
           }
